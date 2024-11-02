@@ -25,6 +25,8 @@ public class Point {
     private Long usedAmount = 0L;
     private LocalDateTime expireAt;
     private boolean isManual;
+    private LocalDateTime canceledAt;
+
 
     // 사용가능한 포인트 계산
     public Long getAvailableAmount() {
