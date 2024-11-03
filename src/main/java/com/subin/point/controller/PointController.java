@@ -1,6 +1,7 @@
 package com.subin.point.controller;
 
 import com.subin.point.dto.EarnRequestDTO;
+import com.subin.point.dto.UseRequestDTO;
 import com.subin.point.entity.Point;
 import com.subin.point.service.PointService;
 import lombok.RequiredArgsConstructor;
@@ -21,5 +22,11 @@ public class PointController {
     public ResponseEntity<Point> earnPoint(@RequestBody EarnRequestDTO request) {
         Point point = pointService.earn(request.getMemberId(), request.getAmount(), request.isManual(), request.getExpireDays());
         return ResponseEntity.ok(point);
+    }
+
+    @PostMapping("/use")
+    public ResponseEntity<Void> usePoint(@RequestBody UseRequestDTO request) {
+        pointService.usePoint(request.getMemberId(), request.getAmount(), request.getOrderId());
+        return ResponseEntity.ok().build();
     }
 }
