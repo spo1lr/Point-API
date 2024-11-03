@@ -2,21 +2,28 @@ package com.subin.point.service;
 
 import com.subin.point.entity.Member;
 import com.subin.point.entity.Point;
+import com.subin.point.entity.PointTransaction;
+import com.subin.point.entity.TransactionType;
 import com.subin.point.repository.MemberRepository;
 import com.subin.point.repository.PointRepository;
+import com.subin.point.repository.PointTransactionRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.List;
+
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 @Service
 public class PointService {
 
-    private final PointRepository pointRepository;
     private final MemberRepository memberRepository;
+    private final PointRepository pointRepository;
+    private final PointTransactionRepository pointTransactionRepository;
 
     @Value("${point.default-expire-days}")
     private int defaultExpireDays;
@@ -54,5 +61,42 @@ public class PointService {
         // 포인트 적립 영속화
         Point point = Point.createPoint(member, amount, isManual, daysToExpire);
         return pointRepository.save(point);
+    }
+
+    // 포인트 사용
+    @Transactional
+    public void usePoint(Long memberId, Long amount, String orderId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
+
+        // 포인트 사용 순서 설정
+        // 1. 관리자 수기지급 포인트, 2. 만료일이 짧게 남은 포인트
+        List<Point> points = pointRepository.availablePointsByMember(member).stream()
+                .filter(p -> p.getAvailableAmount() > 0)
+                .sorted(Comparator.comparing(Point::isManual).reversed()
+                        .thenComparing(Point::getExpireAt))
+                .toList();
+
+        if (points.stream().mapToLong(Point::getAvailableAmount).sum() < amount) {
+            throw new IllegalArgumentException("사용 가능한 포인트가 부족합니다.");
+        }
+
+        Long remainingAmount = amount;
+        for (Point point : points) {
+            Long available = point.getAvailableAmount();
+            if (available <= 0) continue;
+
+            // 포인트 차감
+            Long useAmount = Math.min(available, remainingAmount);
+            point.setUsedAmount(point.getUsedAmount() + useAmount);
+            pointRepository.save(point);
+
+            // 트랜잭션 차감 트랜잭션 생성
+            PointTransaction transaction = PointTransaction.createTransaction(useAmount, orderId, TransactionType.USE, point);
+            pointTransactionRepository.save(transaction);
+
+            remainingAmount -= useAmount;
+            if (remainingAmount == 0) break;
+        }
     }
 }
