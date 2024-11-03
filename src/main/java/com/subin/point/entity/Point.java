@@ -32,4 +32,20 @@ public class Point {
     public Long getAvailableAmount() {
         return amount - usedAmount;
     }
+
+    private void addToMember(Member member) {
+        this.member = member;
+        member.getPoints().add(this);
+    }
+
+    // 포인트 적립
+    public static Point createPoint(Member member, Long amount, boolean isManual, int daysToExpire) {
+        Point point = new Point();
+        point.member = member;
+        point.amount = amount;
+        point.isManual = isManual;
+        point.expireAt = LocalDateTime.now().plusDays(daysToExpire);
+        point.addToMember(member);
+        return point;
+    }
 }
