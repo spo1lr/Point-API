@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -27,6 +29,8 @@ public class Point {
     private boolean isManual;
     private LocalDateTime canceledAt;
 
+    @OneToMany(mappedBy = "point", cascade = CascadeType.ALL)
+    private List<PointTransaction> transactions = new ArrayList<>();
 
     // 사용가능한 포인트 계산
     public Long getAvailableAmount() {
