@@ -92,7 +92,7 @@ public class PointService {
         for (Point point : pointsToCancel) {
             point.setCanceledAt(LocalDateTime.now());
 
-            PointTransaction transaction = PointTransaction.createTransaction(point.getAmount(), null, TransactionType.CANCEL, point);
+            PointTransaction transaction = PointTransaction.createTransaction(point.getAmount(), null, TransactionType.CANCEL, member, point);
             pointTransactionRepository.save(transaction);
         }
     }
@@ -103,7 +103,7 @@ public class PointService {
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
 
         // 포인트 사용 순서 설정
-        // 1. 관리자 수기지급 포인트, 2. 만료일이 가까운 포인트
+        // 1. 관리자 수기지급 포인트, 2. 만료일이 임박한 포인트
         List<Point> points = pointRepository.availablePointsByMember(member).stream()
                 .filter(p -> p.getAvailableAmount() > 0)
                 .sorted(Comparator.comparing(Point::isManual).reversed()
@@ -115,7 +115,6 @@ public class PointService {
         }
 
         Long remainingAmount = amount;
-
         for (Point point : points) {
             Long available = point.getAvailableAmount();
             if (available <= 0) continue;
@@ -126,7 +125,7 @@ public class PointService {
             pointRepository.save(point);
 
             // 트랜잭션 차감 트랜잭션 생성
-            PointTransaction transaction = PointTransaction.createTransaction(useAmount, orderId, TransactionType.USE, point);
+            PointTransaction transaction = PointTransaction.createTransaction(useAmount, orderId, TransactionType.USE, member, point);
             pointTransactionRepository.save(transaction);
 
             remainingAmount -= useAmount;
@@ -167,5 +166,4 @@ public class PointService {
         }
         return null;
     }
-
 }
