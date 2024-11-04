@@ -1,5 +1,6 @@
 package com.subin.point.repository;
 
+import com.subin.point.entity.Member;
 import com.subin.point.entity.PointTransaction;
 import com.subin.point.entity.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,4 +15,7 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
 
     // 이용 타입별 트랜잭션 전체조회
     List<PointTransaction> findAllByType(TransactionType type);
+
+    // 사용자 & 주문번호 & 트랜잭션 타입 조회
+    List<PointTransaction> findByMemberAndOrderIdAndType(Member member, String orderId, TransactionType type);
 }

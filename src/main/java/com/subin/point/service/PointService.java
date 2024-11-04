@@ -134,6 +134,51 @@ public class PointService {
         }
     }
 
+    // 포인트 사용 취소
+    @Transactional
+    public void cancelPointUse(Long memberId, String orderId, Long amount) {
+        // 회원 조회 및 존재 여부 확인
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
+
+        // 주문 ID와 관련된 트랜잭션을 가져와 총 사용된 포인트 계산
+        List<PointTransaction> transactions = pointTransactionRepository.findByMemberAndOrderIdAndType(member, orderId, TransactionType.USE);
+
+        // 포인트 사용 여부 검즘
+        if (transactions.isEmpty()) {
+            throw new IllegalArgumentException("해당 주문에서 사용된 포인트 내역이 존재하지 않습니다.");
+        }
+
+        Long totalUsed = transactions.stream().mapToLong(PointTransaction::getAmount).sum();
+
+        // 취소 금액이 사용 금액보다 큰 금액인지 검증
+        if (amount > totalUsed) {
+            throw new IllegalArgumentException("취소 금액이 해당 주문에서 사용된 포인트 금액보다 큽니다.");
+        }
+
+        Long remainingCancelAmount = amount;
+        for (PointTransaction transaction : transactions) {
+            if (remainingCancelAmount <= 0) break;
+
+            Long cancelableAmount = Math.min(remainingCancelAmount, transaction.getAmount());
+            remainingCancelAmount -= cancelableAmount;
+
+            Point point = transaction.getPoint();
+
+            // 만료 여부에 따라 처리
+            if (point.getExpireAt().isBefore(LocalDateTime.now())) {
+                // 만료된 경우, 신규 포인트로 재적립
+                Point newPoint = Point.createPoint(member, cancelableAmount, point.isManual(), defaultExpireDays);
+                pointRepository.save(newPoint);
+                pointTransactionRepository.save(PointTransaction.createTransaction(cancelableAmount, orderId, TransactionType.REISSUE, member, newPoint));
+            } else {
+                // 만료되지 않은 경우, 사용 포인트 반환
+                point.setUsedAmount(point.getUsedAmount() - cancelableAmount);
+                pointRepository.save(point);
+                pointTransactionRepository.save(PointTransaction.createTransaction(cancelableAmount, orderId, TransactionType.EARN, member, point));
+            }
+        }
+    }
+
     // 적립 취소 가능한 포인트 조합 계산
     private List<Point> findPointsToCancel(List<Point> points, Long targetAmount) {
         Map<Long, List<Point>> cancelablePoints = new HashMap<>();
