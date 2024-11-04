@@ -1,5 +1,6 @@
 package com.subin.point.controller;
 
+import com.subin.point.dto.EarnCancelRequestDTO;
 import com.subin.point.dto.EarnRequestDTO;
 import com.subin.point.dto.UseRequestDTO;
 import com.subin.point.entity.Point;
@@ -22,6 +23,12 @@ public class PointController {
     public ResponseEntity<Point> earnPoint(@RequestBody EarnRequestDTO request) {
         Point point = pointService.earn(request.getMemberId(), request.getAmount(), request.isManual(), request.getExpireDays());
         return ResponseEntity.ok(point);
+    }
+
+    @PostMapping("/earn/cancel")
+    public ResponseEntity<Void> cancelEarn(@RequestBody EarnCancelRequestDTO request) {
+        pointService.cancelEarnedPoint(request.getMemberId(), request.getAmount());
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/use")
