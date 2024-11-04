@@ -3,11 +3,11 @@ package com.subin.point.dto;
 import lombok.Getter;
 
 @Getter
-public class UseRequestDTO {
-    // 회원 ID
+public class UseCancelRequestDTO {
+    // 취소할 회원 ID
     private Long memberId;
-    // 주문번호
+    // 주문 ID
     private String orderId;
-    // 사용 Point 금액
+    // 취소할 포인트 금액
     private Long amount;
 }
