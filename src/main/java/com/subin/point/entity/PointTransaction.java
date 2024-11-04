@@ -19,6 +19,10 @@ public class PointTransaction {
     @JoinColumn(name = "point_id")
     private Point point;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id")
+    private Member member;
+
     private Long amount;
     private String orderId;
 
@@ -28,11 +32,12 @@ public class PointTransaction {
     private TransactionType type;
 
     // 포인트 차감 트랙잭션 생성
-    public static PointTransaction createTransaction(Long amount, String orderId, TransactionType type, Point point) {
+    public static PointTransaction createTransaction(Long amount, String orderId, TransactionType type, Member member, Point point) {
         PointTransaction transaction = new PointTransaction();
         transaction.setAmount(amount);
         transaction.setOrderId(orderId);
         transaction.setType(type);
+        transaction.setMember(member);
         transaction.setPoint(point);
         transaction.setCreatedAt(LocalDateTime.now());
         return transaction;

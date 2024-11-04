@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -164,7 +165,7 @@ public class PointServiceTest {
 
     @Test
     public void 적립취소금액이_취소가능_포인트와_같은_경우_테스트() {
-        // Given
+        // Given - 적립된 금액 만큼 취소
         Long amount1 = 500L;
         Point earn1 = pointService.earn(member.getId(), amount1, true, 30);
         Long amount2 = 700L;
@@ -222,5 +223,47 @@ public class PointServiceTest {
         // 트랜잭션 생성여부 검증
         List<PointTransaction> transactions = pointTransactionRepository.findAllByType(TransactionType.CANCEL);
         assertEquals(1, transactions.size());
+    }
+
+    @Test
+    public void 포인트_사용후_취소_테스트() {
+        // Given - 기존 포인트 적립 후 사용
+        Long amount = 5000L;
+        Point point = pointService.earn(member.getId(), amount, true, 30);
+        // 포인트 사용
+        Long useAmount1 = 2000L;
+        pointService.usePoint(member.getId(), useAmount1, "ORDER001");
+
+        // When
+        pointService.cancelPointUse(member.getId(), "ORDER001", 2000L);
+
+        // Then
+        assertEquals(0L, point.getUsedAmount());
+        assertEquals(amount, point.getAvailableAmount());
+    }
+
+    @Test
+    public void 만료된_포인트_재적립_테스트() {
+        // Given - 만료된 포인트로 적립 및 사용한 트랜잭션 생성
+        Long amount = 5000L;
+        Point point = pointService.earn(member.getId(), amount, true, 30);
+        // 포인트 사용
+        Long useAmount = 3000L;
+        pointService.usePoint(member.getId(), useAmount, "ORDER001");
+
+        point.setExpireAt(LocalDateTime.now().minusDays(1)); // 포인트 만료일 경과
+
+        // When
+        pointService.cancelPointUse(member.getId(), "ORDER001", 3000L);
+
+        // Then
+        List<Point> availablePoints = pointRepository.availablePointsByMember(member);
+        assertEquals(1, availablePoints.size());
+        Point newPoint = availablePoints.get(0);
+
+        assertEquals(useAmount, newPoint.getAmount());
+        assertEquals(0L, newPoint.getUsedAmount());
+        assertTrue(newPoint.getExpireAt().isAfter(LocalDateTime.now()));
+        assertNull(newPoint.getCanceledAt());
     }
 }
