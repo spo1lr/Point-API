@@ -4,6 +4,7 @@ import com.subin.point.entity.Member;
 import com.subin.point.entity.Point;
 import com.subin.point.entity.PointTransaction;
 import com.subin.point.entity.TransactionType;
+import com.subin.point.exception.PointServiceException;
 import com.subin.point.repository.MemberRepository;
 import com.subin.point.repository.PointRepository;
 import com.subin.point.repository.PointTransactionRepository;
@@ -72,7 +73,7 @@ public class PointServiceTest {
         Long amount = maxEarnPoint + 1;
 
         // When & Then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(PointServiceException.class, () -> {
             pointService.earn(member.getId(), amount, true, 30);
         });
     }
@@ -88,7 +89,7 @@ public class PointServiceTest {
         Long amount = 10000L;
 
         // When & Then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(PointServiceException.class, () -> {
             pointService.earn(member.getId(), amount, true, 30);
         });
     }
@@ -99,11 +100,11 @@ public class PointServiceTest {
         Long amount = 5000L;
 
         // When & Then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(PointServiceException.class, () -> {
             pointService.earn(member.getId(), amount, true, 0);
         });
 
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(PointServiceException.class, () -> {
             pointService.earn(member.getId(), amount, true, 365 * 5);
         });
     }
@@ -143,7 +144,7 @@ public class PointServiceTest {
         String orderId = "ORDER001";
 
         // When & Then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(PointServiceException.class, () -> {
             pointService.usePoint(member.getId(), useAmount, orderId);
         });
     }
@@ -158,7 +159,7 @@ public class PointServiceTest {
         Long cancelAmount = amount + 1L;
 
         // When & Then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(PointServiceException.class, () -> {
             pointService.cancelEarnedPoint(member.getId(), cancelAmount);
         });
     }
