@@ -32,6 +32,9 @@ public class Point {
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL)
     private List<PointTransaction> transactions = new ArrayList<>();
 
+    @Version
+    private Long version;
+
     // 사용가능한 포인트 계산
     public Long getAvailableAmount() {
         return amount - usedAmount;
