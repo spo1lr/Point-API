@@ -65,7 +65,7 @@ public class PointService {
 
         // 포인트 적립 영속화
         Point point = Point.createPoint(member, amount, isManual, daysToExpire);
-        PointTransaction.createTransaction(point.getAmount(), null, TransactionType.EARN, member, point);
+        pointTransactionRepository.save(PointTransaction.createTransaction(point.getAmount(), null, TransactionType.EARN, member, point));
         return pointRepository.save(point);
     }
 
