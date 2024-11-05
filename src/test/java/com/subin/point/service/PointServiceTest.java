@@ -1,5 +1,6 @@
 package com.subin.point.service;
 
+import com.subin.point.dto.reponse.Code;
 import com.subin.point.entity.Member;
 import com.subin.point.entity.Point;
 import com.subin.point.entity.PointTransaction;
@@ -8,19 +9,20 @@ import com.subin.point.exception.PointServiceException;
 import com.subin.point.repository.MemberRepository;
 import com.subin.point.repository.PointRepository;
 import com.subin.point.repository.PointTransactionRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@Transactional
+@ActiveProfiles("test")
 @SpringBootTest
 public class PointServiceTest {
     @Autowired
@@ -31,7 +33,6 @@ public class PointServiceTest {
     private PointRepository pointRepository;
     @Autowired
     private PointTransactionRepository pointTransactionRepository;
-
 
     private Member member;
 
@@ -46,17 +47,26 @@ public class PointServiceTest {
         member = new Member();
         member.setName("사용자1");
         member = memberRepository.save(member);
+        memberRepository.flush();
+    }
+
+    @AfterEach
+    public void tearDown() {
+        pointTransactionRepository.deleteAllInBatch();
+        pointRepository.deleteAllInBatch();
+        memberRepository.deleteAllInBatch();
     }
 
     @Test
     public void 포인트적립_성공_테스트() {
-        // Given
+        // Given - 포인트 적립: 5000 포인트, 관리자 지급, 만료일 30일
         Long amount = 5000L;
         boolean isManual = true;
         int expireDays = 30;
 
         // When
         Point point = pointService.earn(member.getId(), amount, isManual, expireDays);
+        pointRepository.flush();
 
         // Then
         assertNotNull(point);
@@ -85,28 +95,36 @@ public class PointServiceTest {
 
         Point existingPoint = Point.createPoint(member, existingAmount, true, 365);
         pointRepository.save(existingPoint);
+        pointRepository.flush();
 
         Long amount = 10000L;
 
         // When & Then
-        assertThrows(PointServiceException.class, () -> {
+        PointServiceException exception =  assertThrows(PointServiceException.class, () -> {
             pointService.earn(member.getId(), amount, true, 30);
+            pointRepository.flush();
         });
+        assertEquals(Code.MAX_POINTS_EXCEEDED, exception.getCode());
+
     }
 
     @Test
     public void 유효하지않은_만료일수_포인트적립_테스트() {
-        // Given
+        // Given - 포인트 적립 : 5000 포인트
         Long amount = 5000L;
 
         // When & Then
-        assertThrows(PointServiceException.class, () -> {
+        PointServiceException exception1 = assertThrows(PointServiceException.class, () -> {
             pointService.earn(member.getId(), amount, true, 0);
+            pointRepository.flush();
         });
+        assertEquals(Code.EXPIRES_OUT_OF_RANGE, exception1.getCode());
 
-        assertThrows(PointServiceException.class, () -> {
+        PointServiceException exception2 = assertThrows(PointServiceException.class, () -> {
             pointService.earn(member.getId(), amount, true, 365 * 5);
+            pointRepository.flush();
         });
+        assertEquals(Code.EXPIRES_OUT_OF_RANGE, exception2.getCode());
     }
 
     @Test
@@ -117,10 +135,13 @@ public class PointServiceTest {
         String orderId = "ORDER001";
 
         pointService.earn(member.getId(), earnPoint, true, 30);
+        pointRepository.flush();
         pointService.earn(member.getId(), earnPoint, true, 30);
+        pointRepository.flush();
 
         // When
         pointService.usePoint(member.getId(), usePoint, orderId);
+        pointRepository.flush();
 
         // Then
         List<PointTransaction> transactions = pointTransactionRepository.findByOrderId(orderId);
@@ -139,14 +160,17 @@ public class PointServiceTest {
     public void 포인트사용_잔액부족_테스트() {
         // Given - 적립된 포인트보다 큰값 설정
         pointService.earn(member.getId(), maxEarnPoint, true, 30);
+        pointRepository.flush();
 
         Long useAmount = maxEarnPoint + 1;
         String orderId = "ORDER001";
 
         // When & Then
-        assertThrows(PointServiceException.class, () -> {
+        PointServiceException exception = assertThrows(PointServiceException.class, () -> {
             pointService.usePoint(member.getId(), useAmount, orderId);
+            pointRepository.flush();
         });
+        assertEquals(Code.NOT_ENOUGH_POINT, exception.getCode());
     }
 
     @Test
@@ -154,14 +178,16 @@ public class PointServiceTest {
         // Given - 포인트 적립 후 적립액 보다 큰 금액 적립 취소
         Long amount = 1000L;
         pointService.earn(member.getId(), amount, true, 30);
+        pointRepository.flush();
 
         // 취소 금액 (적립액 + 1)
         Long cancelAmount = amount + 1L;
 
         // When & Then
-        assertThrows(PointServiceException.class, () -> {
+        PointServiceException exception = assertThrows(PointServiceException.class, () -> {
             pointService.cancelEarnedPoint(member.getId(), cancelAmount);
         });
+        assertEquals(Code.NOT_ENOUGH_CANCEL_POINT, exception.getCode());
     }
 
     @Test
@@ -171,12 +197,14 @@ public class PointServiceTest {
         Point earn1 = pointService.earn(member.getId(), amount1, true, 30);
         Long amount2 = 700L;
         Point earn2 = pointService.earn(member.getId(), amount2, true, 30);
+        pointRepository.flush();
 
         // 취소 금액
         Long cancelAmount = amount1 + amount2;
 
         // When
         pointService.cancelEarnedPoint(member.getId(), cancelAmount);
+        pointRepository.flush();
 
         // Then
         // 포인트 취소 여부 검증
@@ -187,10 +215,9 @@ public class PointServiceTest {
         assertNotNull(canceledAmount2.getCanceledAt());
 
         // 트랜잭션 생성여부 검증
-        List<PointTransaction> transactions = pointTransactionRepository.findAll();
+        List<PointTransaction> transactions = pointTransactionRepository.findAllByType(TransactionType.CANCEL);
         assertEquals(2, transactions.size());
     }
-
 
     @Test
     public void 적립된_포인트_중_부분사용된_포인트는_적립취소_제외하는_테스트() {
@@ -198,19 +225,21 @@ public class PointServiceTest {
         // 첫 번째 포인트 적립: 500원 (사용된 금액: 200원)
         Long amount1 = 500L;
         Point earn1 = pointService.earn(member.getId(), amount1, true, 30);
-
         // 두 번째 포인트 적립: 700원 (미사용)
         Long amount2 = 700L;
         Point earn2 = pointService.earn(member.getId(), amount2, true, 30);
+        pointRepository.flush();
 
         // 첫번째 적립 포인트 사용
         Long useAmount1 = 200L;
         pointService.usePoint(member.getId(), useAmount1, "ORDER001");
+        pointRepository.flush();
 
         Long amountToCancel = 700L; // 사용되지 않은 포인트만 취소
 
         // When
         pointService.cancelEarnedPoint(member.getId(), amountToCancel);
+        pointRepository.flush();
 
         // Then
         // 첫 번째 포인트는 취소되지 않아야 함
@@ -231,12 +260,15 @@ public class PointServiceTest {
         // Given - 기존 포인트 적립 후 사용
         Long amount = 5000L;
         Point point = pointService.earn(member.getId(), amount, true, 30);
+        pointRepository.flush();
         // 포인트 사용
         Long useAmount1 = 2000L;
         pointService.usePoint(member.getId(), useAmount1, "ORDER001");
+        pointRepository.flush();
 
         // When
         pointService.cancelPointUse(member.getId(), "ORDER001", 2000L);
+        pointRepository.flush();
 
         // Then
         assertEquals(0L, point.getUsedAmount());
@@ -248,21 +280,25 @@ public class PointServiceTest {
         // Given - 만료된 포인트로 적립 및 사용한 트랜잭션 생성
         Long amount = 5000L;
         Point point = pointService.earn(member.getId(), amount, true, 30);
+        pointRepository.flush();
         // 포인트 사용
         Long useAmount = 3000L;
         pointService.usePoint(member.getId(), useAmount, "ORDER001");
+        pointRepository.flush();
 
         point.setExpireAt(LocalDateTime.now().minusDays(1)); // 포인트 만료일 경과
+        pointRepository.flush();
 
         // When
         pointService.cancelPointUse(member.getId(), "ORDER001", 3000L);
+        pointRepository.flush();
 
         // Then
         List<Point> availablePoints = pointRepository.availablePointsByMember(member);
         assertEquals(1, availablePoints.size());
         Point newPoint = availablePoints.get(0);
 
-        assertEquals(useAmount, newPoint.getAmount());
+        assertEquals(amount, newPoint.getAvailableAmount());
         assertEquals(0L, newPoint.getUsedAmount());
         assertTrue(newPoint.getExpireAt().isAfter(LocalDateTime.now()));
         assertNull(newPoint.getCanceledAt());

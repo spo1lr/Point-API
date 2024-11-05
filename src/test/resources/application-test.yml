@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: Point-API
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+# 무료 포인트 설정
+point:
+  default-expire-days: 365  # 기본 만료일자
+  max-earn-point: 10000    # 1회 적립가능 포인트
+  max-hold-point: 30000    # 최대 보유 가능 포인트
