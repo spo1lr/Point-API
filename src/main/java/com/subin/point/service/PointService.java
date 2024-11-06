@@ -32,12 +32,6 @@ public class PointService {
     @Value("${point.default-expire-days}")
     private int defaultExpireDays;
 
-    @Value("${point.max-earn-point}")
-    private Long maxEarnPoint;
-
-    @Value("${point.max-hold-point}")
-    private Long maxHoldPoint;
-
     // 포인트 적립
     @Transactional
     public Point earn(Long memberId, Long amount, boolean isManual, Integer expireDays) {
@@ -108,6 +102,11 @@ public class PointService {
     @Transactional
     public void usePoint(Long memberId, Long amount, String orderId) {
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new MemberServiceException(NOT_FOUND_MEMBER));
+
+        // 동일 주문번호 존재 여부 검증
+        if (pointTransactionRepository.findFirstByOrderIdAndType(orderId, TransactionType.USE).isPresent()) {
+            throw new PointServiceException(DUPLICATE_ORDER);
+        }
 
         // 포인트 사용 순서 설정
         // 1. 관리자 수기지급 포인트, 2. 만료일이 임박한 포인트

@@ -7,8 +7,8 @@ import lombok.Getter;
 public class CreateMemberResponseDTO {
     // 회원 ID
     private Long memberId;
-    // 닉네임
-    private String nickname;
+    // 이름
+    private String name;
     // 1회 최대 적립 포인트
     private Long maxEarnPoint;
     // 최대 보유 포인트
@@ -16,7 +16,7 @@ public class CreateMemberResponseDTO {
 
     public CreateMemberResponseDTO(Member member) {
         memberId = member.getId();
-        nickname = member.getName();
+        name = member.getName();
         maxEarnPoint = member.getMaxEarnPoint();
         maxHoldPoint = member.getMaxHoldPoint();
     }
