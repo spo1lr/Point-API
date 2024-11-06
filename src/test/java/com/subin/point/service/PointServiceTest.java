@@ -13,7 +13,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -36,17 +35,9 @@ public class PointServiceTest {
 
     private Member member;
 
-    @Value("${point.max-earn-point}")
-    private Long maxEarnPoint;
-
-    @Value("${point.max-hold-point}")
-    private Long maxHoldPoint;
-
     @BeforeEach
     public void setUp() {
-        member = new Member();
-        member.setName("사용자1");
-        member = memberRepository.save(member);
+        member = memberRepository.save(Member.createMember("테스트"));
         memberRepository.flush();
     }
 
@@ -80,7 +71,7 @@ public class PointServiceTest {
     @Test
     public void 적립가능한_최대_포인트_테스트() {
         // Given - 적립가능한 최대 포인트보다 큰값 설정
-        Long amount = maxEarnPoint + 1;
+        Long amount = member.getMaxEarnPoint() + 1L;
 
         // When & Then
         assertThrows(PointServiceException.class, () -> {
@@ -91,20 +82,19 @@ public class PointServiceTest {
     @Test
     public void 최대보유포인트_초과_테스트() {
         // Given - 현재 보유 포인트를 최대 보유 포인트보다 낮게 설정
-        Long existingAmount = maxHoldPoint - 5000L;
-
-        Point existingPoint = Point.createPoint(member, existingAmount, true, 365);
+        Long maxHoldPoint = member.getMaxHoldPoint();
+        Point existingPoint = Point.createPoint(member, maxHoldPoint, true, 365);
         pointRepository.save(existingPoint);
         pointRepository.flush();
 
-        Long amount = 10000L;
+        Long amount = maxHoldPoint + 1L;
 
         // When & Then
         PointServiceException exception =  assertThrows(PointServiceException.class, () -> {
             pointService.earn(member.getId(), amount, true, 30);
             pointRepository.flush();
         });
-        assertEquals(Code.MAX_POINTS_EXCEEDED, exception.getCode());
+        assertEquals(Code.MAX_EARN_POINT_OVER, exception.getCode());
 
     }
 
@@ -159,6 +149,7 @@ public class PointServiceTest {
     @Test
     public void 포인트사용_잔액부족_테스트() {
         // Given - 적립된 포인트보다 큰값 설정
+        Long maxEarnPoint = member.getMaxEarnPoint();
         pointService.earn(member.getId(), maxEarnPoint, true, 30);
         pointRepository.flush();
 
