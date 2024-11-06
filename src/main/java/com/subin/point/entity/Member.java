@@ -29,11 +29,17 @@ public class Member {
     private List<Point> points = new ArrayList<>();
 
     // 신규 회원 생성
-    public static Member createMember(String name){
+    public static Member createMember(String name) {
         Member member = new Member();
         member.setName(name);
         member.setMaxEarnPoint(100000L);  // 1회 최대 적립 포인트 기본값: 10만
         member.setMaxHoldPoint(150000L);  // 최대 보유 포인트 기본값: 15만
         return member;
+    }
+
+    // 회원 적립, 보유 포인트 설정 변경
+    public void updateMemberPointSettings(Long maxEarnPoint, Long maxHoldPoint) {
+        this.setMaxEarnPoint(maxEarnPoint);
+        this.setMaxHoldPoint(maxHoldPoint);
     }
 }
