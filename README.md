@@ -58,3 +58,62 @@
    ```bash
    ./gradlew bootRun
    ```
+
+## API Endpoints
+### 회원
+#### 1. **회원가입 `POST /api/v1/members`**
+- **요청 페이로드**
+  ```json
+   {
+       "name": "테스트"
+   }
+  ```
+
+#### 2. **포인트 설정 변경 `POST /api/v1/members/{memberId}/update`**
+- **요청 페이로드**
+  ```json
+   {
+       "maxEarnPoint" : 100000,
+       "maxHoldPoint" : 150000
+   }
+  ```
+### 포인트
+#### 1. **포인트 지급 `POST /api/v1/points/earn`**
+- **요청 페이로드**
+  ```json
+    {
+        "memberId": 1,
+        "amount": 500,
+        "isManual": true,
+        "expireDays": 365
+    }
+  ```
+
+#### 2. **포인트 지급 취소 `POST /api/v1/points/earn/cancel`**
+- **요청 페이로드**
+  ```json
+    {
+        "memberId": 1,
+        "amount": 700
+    }
+  ```
+
+#### 3. **포인트 사용 `POST /api/v1/points/use`**
+- **요청 페이로드**
+  ```json
+    {
+        "memberId": 1,
+        "amount": 1200,
+        "orderId": "ORDER001"
+    }
+  ```
+
+#### 4. **포인트 사용 취소 `POST /api/v1/points/use/cancel`**
+- **요청 페이로드**
+  ```json
+    {
+      "memberId": 1,
+      "amount": 1100,
+      "orderId": "ORDER001"
+    }
+  ```
