@@ -16,13 +16,13 @@ public class Member {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 64)
+    @Column(nullable = false, length = 64, columnDefinition = "VARCHAR(64) COMMENT '이름'")
     private String name;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "BIGINT COMMENT '1회 최대 적립 포인트'")
     private Long maxEarnPoint;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "BIGINT COMMENT '최대 보유 포인트'")
     private Long maxHoldPoint;
 
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
