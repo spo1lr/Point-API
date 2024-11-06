@@ -1,6 +1,6 @@
 package com.subin.point.controller;
 
-import com.subin.point.dto.*;
+import com.subin.point.dto.point.*;
 import com.subin.point.dto.reponse.Code;
 import com.subin.point.dto.reponse.Response;
 import com.subin.point.entity.Point;

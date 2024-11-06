@@ -1,4 +1,4 @@
-package com.subin.point.dto;
+package com.subin.point.dto.point;
 
 import lombok.Getter;
 import lombok.Setter;
