@@ -1,9 +1,7 @@
-package com.subin.point.dto;
+package com.subin.point.dto.point;
 
 import com.subin.point.entity.Point;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 
