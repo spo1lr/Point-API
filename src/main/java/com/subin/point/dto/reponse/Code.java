@@ -12,6 +12,7 @@ public enum Code {
     REQUEST_SUCCESS(HttpStatus.OK, "성공"),
     // 회원
     NOT_FOUND_MEMBER(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
+    DUPLICATE_NAME(HttpStatus.BAD_REQUEST, "중복된 닉네임 입니다."),
     // 포인트
     MAX_EARN_POINT_OVER(HttpStatus.BAD_REQUEST, "1회 적립 가능한 포인트를 초과했습니다."),
     MAX_POINTS_EXCEEDED(HttpStatus.BAD_REQUEST, "보유 가능한 포인트를 초과했습니다."),
