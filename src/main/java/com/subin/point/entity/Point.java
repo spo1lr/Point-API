@@ -20,13 +20,22 @@ public class Point {
 
     @JsonIgnore
     @ManyToOne
-    @JoinColumn(name = "member_id")
+    @JoinColumn(name = "member_id", columnDefinition = "BIGINT COMMENT '회원 ID'")
     private Member member;
 
+    @Column(nullable = false, columnDefinition = "BIGINT COMMENT '포인트 금액'")
     private Long amount;
+
+    @Column(nullable = false, columnDefinition = "BIGINT DEFAULT 0 COMMENT '사용된 포인트 금액'")
     private Long usedAmount = 0L;
-    private LocalDateTime expireAt;
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN COMMENT '관리자 수기 지급 여부'")
     private boolean isManual;
+
+    @Column(columnDefinition = "TIMESTAMP COMMENT '만료일시'")
+    private LocalDateTime expireAt;
+
+    @Column(columnDefinition = "TIMESTAMP COMMENT '취소일시'")
     private LocalDateTime canceledAt;
 
     @OneToMany(mappedBy = "point", cascade = CascadeType.ALL)
