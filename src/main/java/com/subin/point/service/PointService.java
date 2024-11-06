@@ -32,12 +32,6 @@ public class PointService {
     @Value("${point.default-expire-days}")
     private int defaultExpireDays;
 
-    @Value("${point.max-earn-point}")
-    private Long maxEarnPoint;
-
-    @Value("${point.max-hold-point}")
-    private Long maxHoldPoint;
-
     // 포인트 적립
     @Transactional
     public Point earn(Long memberId, Long amount, boolean isManual, Integer expireDays) {
