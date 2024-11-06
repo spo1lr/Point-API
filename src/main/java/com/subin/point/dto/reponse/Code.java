@@ -17,6 +17,7 @@ public enum Code {
     MAX_EARN_POINT_OVER(HttpStatus.BAD_REQUEST, "1회 적립 가능한 포인트를 초과했습니다."),
     MAX_POINTS_EXCEEDED(HttpStatus.BAD_REQUEST, "보유 가능한 포인트를 초과했습니다."),
     EXPIRES_OUT_OF_RANGE(HttpStatus.BAD_REQUEST, "만료일은 1일 이상, 5년 미만이어야 합니다."),
+    DUPLICATE_ORDER(HttpStatus.BAD_REQUEST, "동일한 주문번호가 존재합니다."),
     NOT_ENOUGH_POINT(HttpStatus.BAD_REQUEST, "사용 가능한 포인트가 부족합니다."),
     NOT_ENOUGH_CANCEL_POINT(HttpStatus.BAD_REQUEST, "취소 가능한 포인트가 부족합니다."),
     CANCEL_ONLY_UNUSED_POINTS(HttpStatus.BAD_REQUEST, "미사용된 적립 포인트 단위로 취소 가능합니다."),

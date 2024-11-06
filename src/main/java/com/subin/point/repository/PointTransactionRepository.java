@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PointTransactionRepository extends JpaRepository<PointTransaction, Long> {
@@ -18,4 +19,7 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
 
     // 사용자 & 주문번호 & 트랜잭션 타입 조회
     List<PointTransaction> findByMemberAndOrderIdAndType(Member member, String orderId, TransactionType type);
+
+    // 동일 주문번호 존재 여부
+    Optional<PointTransaction> findFirstByOrderIdAndType(String orderId, TransactionType type);
 }
