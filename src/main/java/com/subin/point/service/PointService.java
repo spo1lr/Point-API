@@ -41,19 +41,21 @@ public class PointService {
     // 포인트 적립
     @Transactional
     public Point earn(Long memberId, Long amount, boolean isManual, Integer expireDays) {
-        // 최대 포인트 적립 검증
-        if (amount < 1 || amount > maxEarnPoint) {
-            throw new PointServiceException(Code.MAX_EARN_POINT_OVER);
-        }
 
         // 사용자 조회
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new MemberServiceException(NOT_FOUND_MEMBER));
+
+        // 최대 포인트 적립 검증
+        if (amount < 1 || amount > member.getMaxEarnPoint()) {
+            throw new PointServiceException(Code.MAX_EARN_POINT_OVER);
+        }
+
         // 잔여 포인트 조회
         Long totalPoints = pointRepository.availablePointsByMember(member).stream()
                 .mapToLong(Point::getAvailableAmount).sum();
 
         // 최대보유가능 포인트 검증
-        if (totalPoints + amount > maxHoldPoint) {
+        if (totalPoints + amount > member.getMaxHoldPoint()) {
             throw new PointServiceException(MAX_POINTS_EXCEEDED);
         }
 
