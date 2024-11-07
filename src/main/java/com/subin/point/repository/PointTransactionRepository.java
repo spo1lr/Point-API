@@ -18,6 +18,7 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
     List<PointTransaction> findAllByType(TransactionType type);
 
     // 사용자 & 주문번호 조회
+    @EntityGraph(attributePaths = {"point"})
     List<PointTransaction> findByMemberAndOrderId(Member member, String orderId);
 
     // 사용자 & 주문번호 & 트랜잭션 타입 조회
