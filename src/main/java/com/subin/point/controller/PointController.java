@@ -5,6 +5,7 @@ import com.subin.point.dto.reponse.Code;
 import com.subin.point.dto.reponse.Response;
 import com.subin.point.entity.Point;
 import com.subin.point.service.PointService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +22,7 @@ public class PointController {
 
     // 포인트 적립
     @PostMapping("/earn")
-    public ResponseEntity<Response<EarnResponseDTO>> earnPoint(@RequestBody EarnRequestDTO request) {
+    public ResponseEntity<Response<EarnResponseDTO>> earnPoint(@Valid  @RequestBody EarnRequestDTO request) {
         Point point = pointService.earn(request.getMemberId(), request.getAmount(), request.isManual(), request.getExpireDays());
 
         return Response.of(Code.REQUEST_SUCCESS, new EarnResponseDTO(point));
@@ -29,21 +30,21 @@ public class PointController {
 
     // 포인트 적립 취소
     @PostMapping("/earn/cancel")
-    public ResponseEntity<Response<Void>> cancelEarn(@RequestBody EarnCancelRequestDTO request) {
+    public ResponseEntity<Response<Void>> cancelEarn(@Valid @RequestBody EarnCancelRequestDTO request) {
         pointService.cancelEarnedPoint(request.getMemberId(), request.getAmount());
         return Response.of(Code.REQUEST_SUCCESS);
     }
 
     // 포인트 사용
     @PostMapping("/use")
-    public ResponseEntity<Response<Void>> usePoint(@RequestBody UseRequestDTO request) {
+    public ResponseEntity<Response<Void>> usePoint(@Valid @RequestBody UseRequestDTO request) {
         pointService.usePoint(request.getMemberId(), request.getAmount(), request.getOrderId());
         return Response.of(Code.REQUEST_SUCCESS);
     }
 
     // 포인트 사용 취소
     @PostMapping("/use/cancel")
-    public ResponseEntity<Response<Void>> cancelPointUse(@RequestBody UseCancelRequestDTO request) {
+    public ResponseEntity<Response<Void>> cancelPointUse(@Valid @RequestBody UseCancelRequestDTO request) {
         pointService.cancelPointUse(request.getMemberId(), request.getOrderId(), request.getAmount());
         return Response.of(Code.REQUEST_SUCCESS);
     }
