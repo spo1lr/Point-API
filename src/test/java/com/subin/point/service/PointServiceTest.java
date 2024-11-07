@@ -90,7 +90,7 @@ public class PointServiceTest {
         Long amount = maxHoldPoint + 1L;
 
         // When & Then
-        PointServiceException exception =  assertThrows(PointServiceException.class, () -> {
+        PointServiceException exception = assertThrows(PointServiceException.class, () -> {
             pointService.earn(member.getId(), amount, true, 30);
             pointRepository.flush();
         });
@@ -293,5 +293,66 @@ public class PointServiceTest {
         assertEquals(0L, newPoint.getUsedAmount());
         assertTrue(newPoint.getExpireAt().isAfter(LocalDateTime.now()));
         assertNull(newPoint.getCanceledAt());
+    }
+
+    @Test
+    public void 예시_통합테스트() {
+        // Step A: 1000원 적립 (총 잔액 0 -> 1000원)
+        Long amount1 = 1000L;
+        Point pointA = pointService.earn(member.getId(), amount1, true, 30);
+        pointRepository.flush();
+
+        // Step B: 500원 적립 (총 잔액 1000 -> 1500원)
+        Long amount2 = 500L;
+        Point pointB = pointService.earn(member.getId(), amount2, true, 30);
+        pointRepository.flush();
+
+        // Step C: A1234에서 1200원 사용 (총 잔액 1500 -> 300원)
+        Long useAmount = 1200L;
+        String orderId = "A1234";
+        pointService.usePoint(member.getId(), useAmount, orderId);
+        pointRepository.flush();
+
+        // 사용 금액 검증 (1000 + 200 = 1200)
+        List<PointTransaction> transactions = pointTransactionRepository.findByMemberAndOrderIdAndType(member, orderId, TransactionType.USE);
+        assertEquals(2, transactions.size());
+        assertEquals(1000L, transactions.get(0).getAmount());
+        assertEquals(200L, transactions.get(1).getAmount());
+
+        // 지급 포인트 - 1000 / 사용 포인트 - 1000
+        Point updatedPointA = pointRepository.findById(pointA.getId()).orElseThrow();
+        assertEquals(1000L, updatedPointA.getUsedAmount());
+        // 지급 포인트 - 500 / 사용 포인트 - 200
+        Point updatedPointB = pointRepository.findById(pointB.getId()).orElseThrow();
+        assertEquals(200L, updatedPointB.getUsedAmount());
+
+        // Step D: A의 적립이 만료되었다
+        updatedPointA.setExpireAt(LocalDateTime.now().minusDays(1));
+        pointRepository.flush();
+
+        // Step E: C의 사용금액 1200원 중 1100원을 부분 사용 취소 (총 잔액 300 -> 1400원)
+        Long cancelAmount = 1100L;
+        pointService.cancelPointUse(member.getId(), orderId, cancelAmount);
+        pointRepository.flush();
+
+        // 사용 가능한 총 포인트 조회
+        List<Point> remainingPoints = pointRepository.availablePointsByMember(member).stream()
+                .filter(p -> p.getAvailableAmount() > 0).toList();
+        long totalPoint = remainingPoints.stream().mapToLong(Point::getAvailableAmount).sum();
+
+        // 1200원 중 1100원을 부분 사용취소 했으므로 사용가능 포인트는 1400 포인트.
+        assertEquals(1400L, totalPoint);
+
+        // 101원 이상 금액을 부분취소 할 수 없다.
+        Long availableCancelPoint = 100L;
+        PointServiceException exception = assertThrows(PointServiceException.class, () -> {
+            pointService.cancelPointUse(member.getId(), orderId, availableCancelPoint + 1L);
+            pointRepository.flush();
+        });
+        assertEquals(Code.NOT_ENOUGH_CANCEL_POINT, exception.getCode());
+
+        // 100원을 부분취소 할 수 있다.
+        pointService.cancelPointUse(member.getId(), orderId, availableCancelPoint);
+        pointRepository.flush();
     }
 }
