@@ -41,6 +41,9 @@
 ## 엔티티 관계 다이어그램 (ERD)
 ![ERD 다이어그램](./src/main/resources/docs/Point_API_ERD.png)
 
+## 아키텍처 설계도
+![아키텍처 설계도](./src/main/resources/docs/AWS_Architecture.png)
+
 ## Build (프로젝트 빌드)
 1. **Clone Repository**
    ```bash
