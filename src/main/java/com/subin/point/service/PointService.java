@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.subin.point.dto.reponse.Code.*;
 
@@ -104,7 +105,7 @@ public class PointService {
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new MemberServiceException(NOT_FOUND_MEMBER));
 
         // 동일 주문번호 존재 여부 검증
-        if (pointTransactionRepository.findFirstByOrderIdAndType(orderId, TransactionType.USE).isPresent()) {
+        if (pointTransactionRepository.existsByOrderIdAndType(orderId, TransactionType.USE)) {
             throw new PointServiceException(DUPLICATE_ORDER);
         }
 
@@ -144,15 +145,29 @@ public class PointService {
         // 회원 조회 및 존재 여부 확인
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new MemberServiceException(NOT_FOUND_MEMBER));
 
-        // 주문 ID와 관련된 트랜잭션을 가져와 총 사용된 포인트 계산
-        List<PointTransaction> transactions = pointTransactionRepository.findByMemberAndOrderIdAndType(member, orderId, TransactionType.USE);
+        // 포인트 트랜잭션으로 총 사용된 포인트 계산 (USE, USECANCEL)
+        List<PointTransaction> transactions = pointTransactionRepository
+                .findByMemberAndOrderIdAndTypeIn(member, orderId, Arrays.asList(TransactionType.USE, TransactionType.USECANCEL));
 
         // 포인트 사용 여부 검즘
         if (transactions.isEmpty()) {
             throw new PointServiceException(NOT_FOUND_USING_POINT);
         }
 
-        Long totalUsed = transactions.stream().mapToLong(PointTransaction::getAmount).sum();
+        // 포인트 ID별 순 사용 포인트 계산 및 필터링
+        List<PointTransaction> filteredTransactions = transactions.stream()
+                .collect(Collectors.groupingBy(t -> t.getPoint().getId()))
+                .entrySet().stream()
+                .filter(entry -> entry.getValue().stream()
+                        .mapToLong(t -> t.getType() == TransactionType.USE ? t.getAmount() : -t.getAmount())
+                        .sum() != 0)
+                .flatMap(entry -> entry.getValue().stream())
+                .toList();
+
+        // 총 사용된 포인트 계산 (USE - USECANCEL)
+        Long totalUsed = transactions.stream()
+                .mapToLong(t -> t.getType() == TransactionType.USE ? t.getAmount() : -t.getAmount())
+                .sum();
 
         // 취소 금액이 사용 금액보다 큰 금액인지 검증
         if (amount > totalUsed) {
@@ -160,7 +175,8 @@ public class PointService {
         }
 
         Long remainingCancelAmount = amount;
-        for (PointTransaction transaction : transactions) {
+
+        for (PointTransaction transaction : filteredTransactions) {
             if (remainingCancelAmount <= 0) break;
 
             Long cancelableAmount = Math.min(remainingCancelAmount, transaction.getAmount());
@@ -173,11 +189,17 @@ public class PointService {
                 // 만료된 경우, 신규 포인트로 재적립
                 Point newPoint = Point.createPoint(member, cancelableAmount, point.isManual(), defaultExpireDays);
                 pointRepository.save(newPoint);
-                pointTransactionRepository.save(PointTransaction.createTransaction(cancelableAmount, orderId, TransactionType.REISSUE, member, newPoint));
+                // 사용취소
+                pointTransactionRepository.save(PointTransaction.createTransaction(cancelableAmount, orderId, TransactionType.USECANCEL, member, point));
+                // 만료 재적립
+                pointTransactionRepository.save(PointTransaction.createTransaction(cancelableAmount, orderId, TransactionType.REISSUE, member, point));
             } else {
                 // 만료되지 않은 경우, 사용 포인트 반환
                 point.setUsedAmount(point.getUsedAmount() - cancelableAmount);
                 pointRepository.save(point);
+                // 사용취소
+                pointTransactionRepository.save(PointTransaction.createTransaction(cancelableAmount, orderId, TransactionType.USECANCEL, member, point));
+                // 적립
                 pointTransactionRepository.save(PointTransaction.createTransaction(cancelableAmount, orderId, TransactionType.EARN, member, point));
             }
         }
