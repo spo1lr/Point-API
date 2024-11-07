@@ -104,7 +104,7 @@ public class PointService {
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new MemberServiceException(NOT_FOUND_MEMBER));
 
         // 동일 주문번호 존재 여부 검증
-        if (pointTransactionRepository.findFirstByOrderIdAndType(orderId, TransactionType.USE).isPresent()) {
+        if (pointTransactionRepository.existsByOrderIdAndType(orderId, TransactionType.USE)) {
             throw new PointServiceException(DUPLICATE_ORDER);
         }
 
