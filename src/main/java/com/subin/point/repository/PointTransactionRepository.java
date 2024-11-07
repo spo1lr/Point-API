@@ -17,9 +17,12 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
     // 이용 타입별 트랜잭션 전체조회
     List<PointTransaction> findAllByType(TransactionType type);
 
+    // 사용자 & 주문번호 조회
+    List<PointTransaction> findByMemberAndOrderId(Member member, String orderId);
+
     // 사용자 & 주문번호 & 트랜잭션 타입 조회
     List<PointTransaction> findByMemberAndOrderIdAndType(Member member, String orderId, TransactionType type);
 
-    // 동일 주문번호 존재 여부
+    // 주문번호 단건조회
     Optional<PointTransaction> findFirstByOrderIdAndType(String orderId, TransactionType type);
 }
