@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.subin.point.dto.reponse.Code.*;
 
@@ -144,21 +145,29 @@ public class PointService {
         // 회원 조회 및 존재 여부 확인
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new MemberServiceException(NOT_FOUND_MEMBER));
 
-        // 주문 ID와 관련된 트랜잭션을 가져와 총 사용된 포인트 계산
-        List<PointTransaction> transactions = pointTransactionRepository.findByMemberAndOrderId(member, orderId);
+        // 포인트 트랜잭션으로 총 사용된 포인트 계산 (USE, USECANCEL)
+        List<PointTransaction> transactions = pointTransactionRepository
+                .findByMemberAndOrderIdAndTypeIn(member, orderId, Arrays.asList(TransactionType.USE, TransactionType.USECANCEL));
 
         // 포인트 사용 여부 검즘
         if (transactions.isEmpty()) {
             throw new PointServiceException(NOT_FOUND_USING_POINT);
         }
 
+        // 포인트 ID별 순 사용 포인트 계산 및 필터링
+        List<PointTransaction> filteredTransactions = transactions.stream()
+                .collect(Collectors.groupingBy(t -> t.getPoint().getId()))
+                .entrySet().stream()
+                .filter(entry -> entry.getValue().stream()
+                        .mapToLong(t -> t.getType() == TransactionType.USE ? t.getAmount() : -t.getAmount())
+                        .sum() != 0)
+                .flatMap(entry -> entry.getValue().stream())
+                .toList();
+
         // 총 사용된 포인트 계산 (USE - USECANCEL)
         Long totalUsed = transactions.stream()
-                .mapToLong(t -> {
-                    if (t.getType() == TransactionType.USE) return t.getAmount();
-                    else if (t.getType() == TransactionType.USECANCEL) return -t.getAmount();
-                    else return 0L;
-                }).sum();
+                .mapToLong(t -> t.getType() == TransactionType.USE ? t.getAmount() : -t.getAmount())
+                .sum();
 
         // 취소 금액이 사용 금액보다 큰 금액인지 검증
         if (amount > totalUsed) {
@@ -166,7 +175,8 @@ public class PointService {
         }
 
         Long remainingCancelAmount = amount;
-        for (PointTransaction transaction : transactions) {
+
+        for (PointTransaction transaction : filteredTransactions) {
             if (remainingCancelAmount <= 0) break;
 
             Long cancelableAmount = Math.min(remainingCancelAmount, transaction.getAmount());
@@ -180,7 +190,7 @@ public class PointService {
                 Point newPoint = Point.createPoint(member, cancelableAmount, point.isManual(), defaultExpireDays);
                 pointRepository.save(newPoint);
                 // 사용취소
-                pointTransactionRepository.save(PointTransaction.createTransaction(cancelableAmount, orderId, TransactionType.USECANCEL, member, newPoint));
+                pointTransactionRepository.save(PointTransaction.createTransaction(cancelableAmount, orderId, TransactionType.USECANCEL, member, point));
                 // 만료 재적립
                 pointTransactionRepository.save(PointTransaction.createTransaction(cancelableAmount, orderId, TransactionType.REISSUE, member, point));
             } else {
